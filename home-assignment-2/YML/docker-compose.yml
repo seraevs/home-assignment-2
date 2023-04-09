@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=system1
+      - MYSQL_DATABASE=spiral_db
+      - MYSQL_USER=spiral
+      - MYSQL_PASSWORD=system1
+      - MYSQL_ROOT_HOST='%'
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - app_network 
+
+  redis:
+    image: redis:latest
+    volumes:
+      - ./redis_data:/data	
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "6379:6379"
+    networks:
+      - app_network 
+
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      DATABASE_URL: mysql://spiral:system1@mysql/spiral_db
+      REDIS_URL: redis://redis:6379/0
+    networks:
+      - app_network 
+
+  worker:
+    build: ./worker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network 
+
+
+  client:
+    build: ./client
+    ports:
+      - "3000:3000"
+    depends_on:
+      server:
+        condition: service_started
+    networks:
+      - app_network 
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:

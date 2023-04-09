@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: system1!
+      MYSQL_DATABASE: mysql_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: system1!
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:latest
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    ports:
+      - "6379:6379"
+
+  server:
+    build: ./server
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      DATABASE_URL: mysql://user:password@mysql/db_name
+      REDIS_URL: redis://redis:6379/0
+
+  worker:
+    build: ./worker
+    depends_on:
+      - redis
+    environment:
+      REDIS_URL: redis://redis:6379/0
+
+  client:
+    build: ./client
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
