@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client
+  template:
+    metadata:
+      labels:
+        app: client
+    spec:
+      containers:
+      - name: client
+        image: spiral_client
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MYSQL_HOST
+          value: mysql_data
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: REDIS_HOST
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+---
+api
